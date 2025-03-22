@@ -59,9 +59,3 @@ This approach improves scalability and simplifies data-driven UI rendering.
    ```sh
    npm start
    ```
-
-## 🚀 Next Steps
-
-- Dive deeper into state and hooks
-- Handle events in React
-- Implement routing with React Router
