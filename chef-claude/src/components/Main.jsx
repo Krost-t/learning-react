@@ -8,9 +8,21 @@ export default function Main() {
         ["chicken", "all the main spices", "corn", "heavy cream", "pasta"]
     )
     const [recipe, setRecipe] = React.useState("")
+    const recipeSection = React.useRef(null)
+    
+    React.useEffect(() => {
+        if (recipe !== "" && recipeSection.current !== null) {
+            // recipeSection.current.scrollIntoView({behavior: "smooth"})
+            const yCoord = recipeSection.current.getBoundingClientRect().top + window.scrollY
+            window.scroll({
+                top: yCoord,
+                behavior: "smooth"
+            })
+        }
+    }, [recipe])
 
     async function getRecipe() {
-        const recipeMarkdown = await getRecipeFromMistral(ingredients)
+        const recipeMarkdown = await getRecipeFromChefClaude(ingredients)
         setRecipe(recipeMarkdown)
     }
 
@@ -18,7 +30,7 @@ export default function Main() {
         const newIngredient = formData.get("ingredient")
         setIngredients(prevIngredients => [...prevIngredients, newIngredient])
     }
-
+    
     return (
         <main>
             <form action={addIngredient} className="add-ingredient-form">
@@ -33,6 +45,7 @@ export default function Main() {
 
             {ingredients.length > 0 &&
                 <IngredientsList
+                    ref={recipeSection}
                     ingredients={ingredients}
                     getRecipe={getRecipe}
                 />

@@ -1,49 +1,52 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { HfInference } from "@huggingface/inference";
+import React from "react"
+import IngredientsList from "./IngredientsList"
+import ClaudeRecipe from "./ClaudeRecipe"
+import { getRecipeFromChefClaude, getRecipeFromMistral } from "../ai"
 
-const SYSTEM_PROMPT = `
-You are an assistant that receives a list of ingredients that a user has and suggests a recipe they could make with some or all of those ingredients. You don't need to use every ingredient they mention in your recipe. The recipe can include additional ingredients they didn't mention, but try not to include too many extra ingredients. Format your response in markdown to make it easier to render to a web page
-`;
+export default function Main() {
+    const [ingredients, setIngredients] = React.useState(
+        ["chicken", "all the main spices", "corn", "heavy cream", "pasta"]
+    )
+    const [recipe, setRecipe] = React.useState("")
+    const recipeSection = React.useRef(null)
+    
+    React.useEffect(() => {
+        if (recipe !== "" && recipeSection.current !== null) {
+            recipeSection.current.scrollIntoView()
+        }
+    }, [recipe])
 
-const anthropic = new Anthropic({
-  apiKey: import.meta.env.ANTHROPIC_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+    async function getRecipe() {
+        const recipeMarkdown = await getRecipeFromChefClaude(ingredients)
+        setRecipe(recipeMarkdown)
+    }
 
-export async function getRecipeFromChefClaude(ingredientsArr) {
-  const ingredientsString = ingredientsArr.join(", ");
-  const msg = await anthropic.messages.create({
-    model: "claude-3-haiku-20240307",
-    max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `I have ${ingredientsString}. Please give me a recipe you'd recommend I make!`,
-      },
-    ],
-  });
-  return msg.content[0].text;
-}
+    function addIngredient(formData) {
+        const newIngredient = formData.get("ingredient")
+        setIngredients(prevIngredients => [...prevIngredients, newIngredient])
+    }
+    
+    return (
+        <main>
+            <form action={addIngredient} className="add-ingredient-form">
+                <input
+                    type="text"
+                    placeholder="e.g. oregano"
+                    aria-label="Add ingredient"
+                    name="ingredient"
+                />
+                <button>Add ingredient</button>
+            </form>
 
-const hf = new HfInference(import.meta.env.HF_ACCESS_TOKEN);
+            {ingredients.length > 0 &&
+                <IngredientsList
+                    ref={recipeSection}
+                    ingredients={ingredients}
+                    getRecipe={getRecipe}
+                />
+            }
 
-export async function getRecipeFromMistral(ingredientsArr) {
-  const ingredientsString = ingredientsArr.join(", ");
-  try {
-    const response = await hf.chatCompletion({
-      model: "mistralai/Mixtral-8x7B-Instruct-v0.1",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `I have ${ingredientsString}. Please give me a recipe you'd recommend I make!`,
-        },
-      ],
-      max_tokens: 1024,
-    });
-    return response.choices[0].message.content;
-  } catch (err) {
-    console.error(err.message);
-  }
+            {recipe && <ClaudeRecipe recipe={recipe} />}
+        </main>
+    )
 }
